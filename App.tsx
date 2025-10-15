@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import { generateSpeech } from './services/geminiService';
-import { decode, pcmToWavBlob } from './utils/audioUtils';
+import { decode, pcmToMp3Blob } from './utils/audioUtils';
 import { VOICES } from './constants';
 
 const Loader: React.FC = () => (
@@ -42,9 +42,9 @@ const App: React.FC = () => {
     try {
       const base64Audio = await generateSpeech(text, selectedVoice);
       const pcmData = decode(base64Audio);
-      const wavBlob = pcmToWavBlob(pcmData, 1, 24000);
-      const url = URL.createObjectURL(wavBlob);
-      setAudioData({ url, blob: wavBlob });
+      const mp3Blob = pcmToMp3Blob(pcmData, 1, 24000);
+      const url = URL.createObjectURL(mp3Blob);
+      setAudioData({ url, blob: mp3Blob });
     } catch (e) {
       console.error(e);
       setError('Gagal menghasilkan audio. Silakan periksa kunci API Anda dan coba lagi.');
@@ -57,7 +57,7 @@ const App: React.FC = () => {
     if (!audioData) return;
     const link = document.createElement('a');
     link.href = audioData.url;
-    link.download = `${selectedVoice}-suara.wav`;
+    link.download = `${selectedVoice}-suara.mp3`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -133,7 +133,7 @@ const App: React.FC = () => {
               onClick={handleDownload}
               className="w-full px-8 py-4 bg-slate-200 text-green-600 font-bold rounded-2xl shadow-[5px_5px_10px_#d1d9e6,-5px_-5px_10px_#ffffff] hover:text-green-700 active:shadow-[inset_5px_5px_10px_#d1d9e6,inset_-5px_-5px_10px_#ffffff] focus:outline-none focus:ring-2 focus:ring-offset-4 focus:ring-offset-slate-200 focus:ring-green-500 transition-all duration-200 ease-in-out transform hover:-translate-y-1 active:scale-95"
             >
-              Unduh WAV
+              Unduh MP3
             </button>
           </div>
         )}

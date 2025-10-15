@@ -1,3 +1,7 @@
+// Since lamejs is loaded via a script tag, we need to declare the global.
+// This tells TypeScript that a 'lamejs' variable exists at runtime.
+declare const lamejs: any;
+
 /**
  * Mendekode string base64 menjadi Uint8Array.
  * @param base64 String berenkode base64.
@@ -14,51 +18,36 @@ export function decode(base64: string): Uint8Array {
 }
 
 /**
- * Mengenkode data audio PCM mentah menjadi Blob format file WAV.
- * Ini diperlukan karena tag <audio> tidak dapat memutar PCM mentah secara langsung.
- * @param pcmData Data audio mentah sebagai Uint8Array.
- * @param numChannels Jumlah saluran audio (mis., 1 untuk mono, 2 untuk stereo).
+ * Mengenkode data audio PCM mentah menjadi Blob format file MP3 menggunakan lamejs.
+ * Ini diperlukan untuk membuat file MP3 yang dapat diputar dan diunduh.
+ * @param pcmData Data audio mentah sebagai Uint8Array (diasumsikan PCM 16-bit signed).
+ * @param numChannels Jumlah saluran audio (mis., 1 untuk mono).
  * @param sampleRate Tingkat sampel audio (mis., 24000 untuk Gemini TTS).
- * @returns Sebuah Blob yang merepresentasikan file WAV.
+ * @returns Sebuah Blob yang merepresentasikan file MP3.
  */
-export function pcmToWavBlob(pcmData: Uint8Array, numChannels: number, sampleRate: number): Blob {
-  const bytesPerSample = 2; // 16-bit PCM
-  const blockAlign = numChannels * bytesPerSample;
-  const byteRate = sampleRate * blockAlign;
-  const dataSize = pcmData.length;
+export function pcmToMp3Blob(pcmData: Uint8Array, numChannels: number, sampleRate: number): Blob {
+  // lamejs mengharapkan data PCM sebagai Int16Array.
+  // Buffer dari Uint8Array dapat dilihat sebagai Int16Array.
+  const samples = new Int16Array(pcmData.buffer);
 
-  const buffer = new ArrayBuffer(44 + dataSize);
-  const view = new DataView(buffer);
+  const mp3encoder = new lamejs.Mp3Encoder(numChannels, sampleRate, 128); // 128 kbps bitrate
+  const mp3Data: Int8Array[] = [];
 
-  // RIFF header
-  writeString(view, 0, 'RIFF');
-  view.setUint32(4, 36 + dataSize, true);
-  writeString(view, 8, 'WAVE');
+  const sampleBlockSize = 1152; // Ukuran blok sampel yang direkomendasikan untuk lamejs
 
-  // fmt sub-chunk
-  writeString(view, 12, 'fmt ');
-  view.setUint32(16, 16, true); // Ukuran sub-chunk (16 untuk PCM)
-  view.setUint16(20, 1, true); // Format audio (1 untuk PCM)
-  view.setUint16(22, numChannels, true);
-  view.setUint32(24, sampleRate, true);
-  view.setUint32(28, byteRate, true);
-  view.setUint16(32, blockAlign, true);
-  view.setUint16(34, bytesPerSample * 8, true); // Bit per sampel
-
-  // data sub-chunk
-  writeString(view, 36, 'data');
-  view.setUint32(40, dataSize, true);
-
-  // Tulis data PCM
-  for (let i = 0; i < dataSize; i++) {
-    view.setUint8(44 + i, pcmData[i]);
+  for (let i = 0; i < samples.length; i += sampleBlockSize) {
+    const sampleChunk = samples.subarray(i, i + sampleBlockSize);
+    const mp3buf = mp3encoder.encodeBuffer(sampleChunk);
+    if (mp3buf.length > 0) {
+      // mp3buf adalah Int8Array
+      mp3Data.push(mp3buf);
+    }
   }
 
-  return new Blob([view], { type: 'audio/wav' });
-}
-
-function writeString(view: DataView, offset: number, str: string) {
-  for (let i = 0; i < str.length; i++) {
-    view.setUint8(offset + i, str.charCodeAt(i));
+  const mp3buf = mp3encoder.flush(); // Bersihkan sisa buffer
+  if (mp3buf.length > 0) {
+    mp3Data.push(mp3buf);
   }
+
+  return new Blob(mp3Data, { type: 'audio/mp3' });
 }
