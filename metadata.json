@@ -1,0 +1,5 @@
+{
+  "name": "Generator Suara Google Speech",
+  "description": "Aplikasi web yang mengubah teks menjadi ucapan menggunakan berbagai suara yang didukung oleh Gemini API Google. Pengguna dapat memutar dan mengunduh audio yang dihasilkan.",
+  "requestFramePermissions": []
+}
