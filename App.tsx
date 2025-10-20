@@ -63,6 +63,30 @@ const App: React.FC = () => {
     document.body.removeChild(link);
   };
 
+  const handlePaste = useCallback((event: React.ClipboardEvent<HTMLTextAreaElement>) => {
+    event.preventDefault();
+    const pastedText = event.clipboardData.getData('text/plain') || event.clipboardData.getData('text');
+
+    if (!pastedText) {
+      return;
+    }
+
+    const target = event.currentTarget;
+    const selectionStart = target.selectionStart ?? target.value.length;
+    const selectionEnd = target.selectionEnd ?? selectionStart;
+
+    setText((prevText) => {
+      const before = prevText.slice(0, selectionStart);
+      const after = prevText.slice(selectionEnd);
+      return `${before}${pastedText}${after}`;
+    });
+
+    requestAnimationFrame(() => {
+      const cursorPosition = selectionStart + pastedText.length;
+      target.setSelectionRange(cursorPosition, cursorPosition);
+    });
+  }, []);
+
   return (
     <div className="min-h-screen bg-slate-200 flex items-center justify-center p-4 sm:p-6 transition-colors duration-300">
       <div className="w-full max-w-2xl bg-slate-200 rounded-3xl p-8 sm:p-12 space-y-8 shadow-[8px_8px_16px_#d1d9e6,-8px_-8px_16px_#ffffff]">
@@ -83,6 +107,7 @@ const App: React.FC = () => {
               placeholder="Masukkan teks untuk diubah menjadi suara..."
               value={text}
               onChange={(e) => setText(e.target.value)}
+              onPaste={handlePaste}
               disabled={isLoading}
             />
           </div>
