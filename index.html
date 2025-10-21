@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>tool yang lahir dari keterbatasan</title>
+    <title>Generator Suara Google Speech</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -11,6 +11,13 @@
     <style>
       body {
         font-family: 'Poppins', sans-serif;
+      }
+      @keyframes wave {
+        0%, 100% { transform: scaleY(0.4); }
+        50% { transform: scaleY(1); }
+      }
+      .animate-wave {
+        animation: wave 1.2s infinite ease-in-out;
       }
     </style>
   <script type="importmap">

@@ -19,18 +19,19 @@ export function decode(base64: string): Uint8Array {
 
 /**
  * Mengenkode data audio PCM mentah menjadi Blob format file MP3 menggunakan lamejs.
- * Ini diperlukan untuk membuat file MP3 yang dapat diputar dan diunduh.
  * @param pcmData Data audio mentah sebagai Uint8Array (diasumsikan PCM 16-bit signed).
  * @param numChannels Jumlah saluran audio (mis., 1 untuk mono).
  * @param sampleRate Tingkat sampel audio (mis., 24000 untuk Gemini TTS).
+ * @param bitrate Bitrate untuk enkoding MP3 dalam kbps (mis., 128, 64, 32).
  * @returns Sebuah Blob yang merepresentasikan file MP3.
  */
-export function pcmToMp3Blob(pcmData: Uint8Array, numChannels: number, sampleRate: number): Blob {
+export function pcmToMp3Blob(pcmData: Uint8Array, numChannels: number, sampleRate: number, bitrate: number = 128): Blob {
   // lamejs mengharapkan data PCM sebagai Int16Array.
   // Buffer dari Uint8Array dapat dilihat sebagai Int16Array.
   const samples = new Int16Array(pcmData.buffer);
 
-  const mp3encoder = new lamejs.Mp3Encoder(numChannels, sampleRate, 128); // 128 kbps bitrate
+  // Bitrate sekarang dapat dikonfigurasi untuk mengontrol kualitas vs ukuran file.
+  const mp3encoder = new lamejs.Mp3Encoder(numChannels, sampleRate, bitrate);
   const mp3Data: Int8Array[] = [];
 
   const sampleBlockSize = 1152; // Ukuran blok sampel yang direkomendasikan untuk lamejs

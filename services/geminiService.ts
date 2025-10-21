@@ -1,39 +1,79 @@
 import { GoogleGenAI, Modality } from "@google/genai";
 
-// Inisialisasi klien Google Gemini AI
-// PENTING: Kunci API harus diatur dalam variabel lingkungan.
-const apiKey = process.env.API_KEY;
-if (!apiKey) {
-  throw new Error("Variabel lingkungan API_KEY tidak diatur");
+interface MultiSpeakerConfig {
+  speakers: Array<{ name: string; voiceApiName: string; }>;
 }
-const ai = new GoogleGenAI({ apiKey });
 
 /**
  * Menghasilkan ucapan dari teks menggunakan Gemini API.
- * 
- * Untuk beralih ke penyedia API suara yang berbeda (seperti Google Cloud TTS),
- * Anda akan mengganti isi fungsi ini dengan panggilan SDK penyedia baru.
- * Tanda tangan fungsi (input dan output) dapat tetap sama untuk meminimalkan perubahan
- * di komponen UI (App.tsx).
+ * Mendukung mode suara tunggal dan multi-speaker.
  * 
  * @param text Teks yang akan diubah menjadi ucapan.
- * @param voiceName Nama suara bawaan yang akan digunakan.
+ * @param voiceName Nama suara bawaan yang akan digunakan (hanya untuk mode tunggal).
+ * @param apiKey Kunci API Google Gemini yang disediakan pengguna.
+ * @param multiSpeakerConfig Konfigurasi untuk mode multi-speaker (opsional).
+ * @param conversationStylePrompt Prompt kustom untuk mengatur nada percakapan (hanya untuk multi-speaker).
  * @returns Sebuah promise yang menghasilkan string audio berenkode base64.
  */
-export async function generateSpeech(text: string, voiceName: string): Promise<string> {
+export async function generateSpeech(
+  text: string, 
+  voiceName: string, 
+  apiKey: string,
+  multiSpeakerConfig?: MultiSpeakerConfig,
+  conversationStylePrompt?: string
+): Promise<string> {
+  if (!apiKey) {
+    throw new Error("API Key tidak diberikan. Silakan masukkan kunci Anda.");
+  }
+  
+  const ai = new GoogleGenAI({ apiKey });
+
+  // Tentukan konfigurasi ucapan berdasarkan mode
+  let speechConfig;
+  let finalText = text;
+
+  if (multiSpeakerConfig && multiSpeakerConfig.speakers.length === 2) {
+    speechConfig = {
+      multiSpeakerVoiceConfig: {
+        speakerVoiceConfigs: multiSpeakerConfig.speakers.map(speaker => ({
+          speaker: speaker.name,
+          voiceConfig: {
+            prebuiltVoiceConfig: { voiceName: speaker.voiceApiName }
+          }
+        }))
+      }
+    };
+    
+    // PERBAIKAN: Buat instruksi eksplisit untuk model TTS multi-speaker.
+    const speakerNames = multiSpeakerConfig.speakers.map(s => s.name).join(' dan ');
+    const ttsInstruction = `TTS percakapan berikut antara ${speakerNames}:`;
+
+    // Gabungkan semua bagian prompt dengan benar
+    const promptParts = [ttsInstruction];
+    if (conversationStylePrompt?.trim()) {
+      promptParts.push(conversationStylePrompt.trim());
+    }
+    promptParts.push(text); // Skrip pengguna di akhir
+
+    finalText = promptParts.join('\n\n');
+
+  } else {
+    speechConfig = {
+      voiceConfig: {
+        prebuiltVoiceConfig: { voiceName },
+      },
+    };
+    // Teks akhir untuk mode suara tunggal sudah ditangani di komponen App
+    // (di mana prompt gaya seperti 'marah', 'jenaka', dll. ditambahkan)
+  }
+
   try {
     const response = await ai.models.generateContent({
       model: "gemini-2.5-flash-preview-tts",
-      contents: [{ parts: [{ text }] }],
+      contents: [{ parts: [{ text: finalText }] }],
       config: {
-        // API memerlukan tepat satu modalitas dalam array.
         responseModalities: [Modality.AUDIO],
-        speechConfig: {
-          voiceConfig: {
-            // Pilih salah satu suara bawaan yang tersedia
-            prebuiltVoiceConfig: { voiceName },
-          },
-        },
+        speechConfig: speechConfig,
       },
     });
 
@@ -47,7 +87,6 @@ export async function generateSpeech(text: string, voiceName: string): Promise<s
 
   } catch (error) {
     console.error("Terjadi kesalahan saat menghasilkan suara dengan Gemini API:", error);
-    // Lemparkan kembali error untuk ditangani oleh fungsi pemanggil
     throw error;
   }
 }
