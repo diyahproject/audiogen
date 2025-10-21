@@ -93,6 +93,19 @@ const App: React.FC = () => {
       { id: 2, name: 'Karakter', voice: 'Gita' },
   ]);
   const [multiSpeakerStylePrompt, setMultiSpeakerStylePrompt] = useState<string>('Hasilkan percakapan podcast yang alami dan menarik.');
+  const [installPrompt, setInstallPrompt] = useState<any>(null);
+
+  useEffect(() => {
+    const handleBeforeInstallPrompt = (e: Event) => {
+      e.preventDefault();
+      setInstallPrompt(e);
+      console.log("Event `beforeinstallprompt` ditangkap.");
+    };
+    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    };
+  }, []);
 
   useEffect(() => {
     const storedApiKey = localStorage.getItem('gemini_api_key');
@@ -114,6 +127,18 @@ const App: React.FC = () => {
       localStorage.removeItem('speech_generation_history');
     }
   }, []);
+
+  const handleInstallClick = async () => {
+    if (!installPrompt) return;
+    installPrompt.prompt();
+    const { outcome } = await installPrompt.userChoice;
+    if (outcome === 'accepted') {
+      console.log('Pengguna menerima prompt instalasi');
+    } else {
+      console.log('Pengguna menolak prompt instalasi');
+    }
+    setInstallPrompt(null);
+  };
 
   const handleSaveApiKey = (key: string) => {
     localStorage.setItem('gemini_api_key', key);
@@ -311,9 +336,25 @@ const App: React.FC = () => {
       
       <div className="min-h-screen bg-slate-200 flex items-center justify-center p-4 sm:p-6 transition-colors duration-300">
         <div className="w-full max-w-2xl bg-slate-200 rounded-3xl p-8 sm:p-12 space-y-8 shadow-[8px_8px_16px_#d1d9e6,-8px_-8px_16px_#ffffff]">
-          <header className="text-center">
-            <h1 className="text-4xl font-bold text-slate-800">Kuttab Al Fatih Kediri</h1>
-            <p className="text-slate-500 mt-2 text-lg">sinergi dalam dakwah dan inovasi</p>
+          <header className="text-center relative">
+            <div>
+              <h1 className="text-4xl font-bold text-slate-800">Kuttab Al Fatih Kediri</h1>
+              <p className="text-slate-500 mt-2 text-lg">sinergi dalam dakwah dan inovasi</p>
+            </div>
+            {installPrompt && (
+              <div className="absolute top-0 right-0 -mt-2">
+                 <button 
+                  onClick={handleInstallClick} 
+                  className="px-3 py-2 bg-slate-200 text-blue-600 font-semibold rounded-xl shadow-[5px_5px_10px_#d1d9e6,-5px_-5px_10px_#ffffff] hover:text-blue-700 active:shadow-[inset_5px_5px_10px_#d1d9e6,inset_-5px_-5px_10px_#ffffff] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-slate-200 focus:ring-blue-500 transition-all duration-200 text-sm flex items-center space-x-2"
+                  title="Install aplikasi ini di perangkat Anda"
+                  >
+                   <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                   </svg>
+                   <span>Install</span>
+                </button>
+              </div>
+            )}
           </header>
 
           <div className="space-y-6">
